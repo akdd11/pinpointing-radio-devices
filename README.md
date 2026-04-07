@@ -4,6 +4,8 @@ This repository contains the code to reproduce the results of the paper:
 
 > Anton Schösser, Friedrich Burmeister, Joschua Bogner, Zhongju Li, Philipp Schulz, Gerhard Fettweis and Norman Franchi, "Pinpointing Radio Devices: Robust Fingerprint Localization in Industrial Environments," *2025 59th Asilomar Conference on Signals, Systems, and Computers*, Pacific Grove, California, USA, Oct 2025.
 
+[IEEE Xplore](https://ieeexplore.ieee.org/document/11443652)  [Preprint](https://www.vodafone-chair.org/pbls/anton-schoesser/Pinpointing_Radio_Devices_Robust_Fingerprint_Localization_in_Industrial_Environments.pdf)
+
 The results are based on the dataset
 
 > F. Burmeister and A. Schösser, “Recurring, High-Precision Radio Channel Measurements in a Controlled Time-Varying Industrial Workshop Environment,” 2025. [https://dx.doi.org/10.21227/v21m-n939](https://dx.doi.org/10.21227/v21m-n939)
