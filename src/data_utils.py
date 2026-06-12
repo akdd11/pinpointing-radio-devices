@@ -1,4 +1,5 @@
 import os
+import zipfile
 
 import numpy as np
 
@@ -49,9 +50,37 @@ def downsample_subchannels(data, target_num_subchannels):
     data = 10 * np.log10(data)
     return data
 
+def cfr_to_subband_channel_gain(arr_original, n_subbands):
+    """Convert complex CFR data to logarithmic subband channel gain.
+
+    Parameters
+    ----------
+    arr_original : np.ndarray
+        Input array with shape (n_samples, n_freq_bins).
+    n_subbands : int
+        Number of subbands to create, e.g. 40 or 16.
+
+    Returns
+    -------
+    np.ndarray
+        Array with shape (n_samples, n_subbands) containing 10*log10 of the
+        summed subband energy.
+    """
+    arr_original = np.asarray(arr_original)
+    if arr_original.ndim != 2:
+        raise ValueError(f"arr_original must be 2D, got shape {arr_original.shape}")
+
+    energy = np.abs(arr_original) ** 2
+    subband_energy = np.stack(
+        [energy[:, idx].sum(axis=1) for idx in np.array_split(np.arange(energy.shape[1]), n_subbands)],
+        axis=1,
+    )
+
+    return 10 * np.log10(np.maximum(subband_energy, np.finfo(float).tiny))
+
 
 def load_one_round(data_path, round_idx, ap_idxs, rf_idxs, num_subchannels):
-    """Loads the data for one round.
+    """Loads the data for one round from the zipped files (IEEE DataPort).
 
     Input
     -----
@@ -65,67 +94,44 @@ def load_one_round(data_path, round_idx, ap_idxs, rf_idxs, num_subchannels):
         The indices of the RFs.
     num_subchannels : int
         The number of subchannels which shall be loaded.
-
+    
     Output
     ------
     data : np.ndarray
         Loaded data for the round in the shape [num_samples, num_aps, num_rfs, num_subchannels].
     """
 
-    if num_subchannels != 16 and 40 % num_subchannels != 0:
-        raise ValueError("Number of subchannels is not supported")
+    for ap_idx in ap_idxs:
+        for rf_idx in rf_idxs:
 
-    if num_subchannels == 1:
-        num_subchannels_str = "wideband"
-    elif num_subchannels == 16:
-        num_subchannels_str = f"16subchannels"
-    else:
-        num_subchannels_str = "subchannels"
+            filename = os.path.join(data_path, f"scenario_index_{round_idx}.zip")
+            with zipfile.ZipFile(filename, 'r') as zip_ref:
+                with zip_ref.open(f"cirs_scenario_{round_idx}_rx_{ap_idx}_rf_{rf_idx}.npy") as f:
+                    # the original file contains the CIRs in shape [num_samples, num_taps]
+                    cirs = np.load(f)
 
-    if num_subchannels not in [1, 16]:
-        num_subchannels_loading = 40
-    else:
-        num_subchannels_loading = num_subchannels
+            cirs = cirs.T
+            cfrs = np.fft.fftshift(np.fft.fft(cirs, axis=1), axes=1)
 
-    for ai, ap_idx in enumerate(ap_idxs):
-        for ri, rf_idx in enumerate(rf_idxs):
-            data_ = np.load(
-                os.path.join(
-                    data_path,
-                    f"iteration_{round_idx}_ap_{ap_idx}_rf_{rf_idx}_{num_subchannels_str}.npy",
-                )
-            )
+            data_ = cfr_to_subband_channel_gain(cfrs, num_subchannels)
+            if data_.shape[0] != 33000:
+                data_ = data_[:33000, :]
 
-            if num_subchannels == 1:
-                # make the shape consistent to always have the subchannels as second dimension
-                data_ = data_[np.newaxis, :]
-
-            if ai == 0 and ri == 0:
+            if ap_idx == ap_idxs[0] and rf_idx == rf_idxs[0]:
                 # in the beginning, allocate the memory
                 data = (
                     np.ones(
                         (
+                            data_.shape[0],
                             len(ap_idxs),
                             len(rf_idxs),
-                            num_subchannels_loading,
-                            data_.shape[1],
+                            num_subchannels,
                         )
                     )
                     * np.nan
                 )
 
-            data[ai, ri, :, :] = (
-                data_  # transpose to have the number of samples as the first dimension
-            )
-
-    data = np.transpose(data, (3, 0, 1, 2))
-
-    if data.shape[3] != num_subchannels:
-        data = downsample_subchannels(data, num_subchannels)
-
-    # cut away samples at the beginning because the AGV does not start to move instantaneously
-    # cut away samples at the end because there are NaNs sometimes
-    data = data[250:-15, :, :, :]
+            data[:, ap_idx-1, rf_idx, :] = data_
 
     return data
 
