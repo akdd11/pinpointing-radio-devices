@@ -37,7 +37,7 @@ The default environment name is `pinpointing_radio_devices`.
 
 ### Dataset
 
-Download the dataset from [https://dx.doi.org/10.21227/v21m-n939](https://dx.doi.org/10.21227/v21m-n939) and place it in the `data` folder.
+Download the dataset from [https://dx.doi.org/10.21227/v21m-n939](https://dx.doi.org/10.21227/v21m-n939) and place it in the `data` folder. For running the code, the data does not need to be unzipped, the code will load the data directly from the zipped files.
 
 ### Run the localization algorithms
 
@@ -49,6 +49,18 @@ python src/localization_batch.py
 
 This script will run the localization for all configurations specificied in `results_to_generate.xlsx`. The configurations for the paper are already contained, further configurations can be added.
 
+If the data is stored in a different location, the path can be changed in `src/localization_batch.py` (variable `DATA_PATH`).
+
 ### Generate the figures
 
 The figures for the paper are generated in the notebooks `notebooks/plot_data.ipynb` and `notebooks/plot_results.ipynb`. The figures are saved in the `figures` folder.
+
+
+## Version History
+
+### Version 1.1
+- The data loading and preprocessing has been updated to be compatible with the publicly available dataset. The previous version used a preprocessed version of the data. There are some minor differences in the results due to the different preprocessing, but the overall conclusions of the paper remain unchanged.
+
+
+### Version 1.0
+- Status at paper submission.
